@@ -22,7 +22,11 @@ source .venv/bin/activate
 
 `--download-vendor` fetches `vis-network.min.js` (689 KB) into `vendor/` once.
 After that the tool never needs a CDN again, so commit `vendor/` if you want a
-fresh clone to be offline-ready immediately.
+fresh clone to be offline-ready immediately. Install the requirements first:
+`pip_system_certs` points Python's default SSL context at the operating system
+trust store, which covers framework Python on macOS shipping without a CA
+store and keeps an inspecting proxy's root CA trusted. The script therefore
+builds no SSL context of its own.
 
 ## Credentials
 
@@ -138,9 +142,14 @@ returned it, it is drawn as a dashed grey placeholder rather than dropped — th
 is usually either a stale reference or a gap in the API role's permissions, and
 either way it is worth seeing. The run prints a `Dangling refs` count.
 
-**Partial failures.** Each collection is fetched independently. If one endpoint
-fails the rest still render, the run prints what failed, and the page shows an
-"Incomplete" warning in the sidebar.
+**Errors are deliberately unhandled.** Failures from the HTTP and ZPA
+libraries propagate with their original type and traceback — a rejected
+sign-in surfaces as the library's own
+`ValueError: 401 :Session is not authenticated or timed out`, pointing at the
+line that raised it. Nothing is caught and summarised, and a failed collection
+aborts the run rather than rendering a partial graph. Only the script's own
+preconditions (missing credentials, unknown cloud, absent vendor file) exit
+with a tidy one-line message.
 
 **Large tenants.** Sidebar lists render at most 500 rows per type; use search to
 narrow. The graph itself is not capped.

@@ -19,6 +19,10 @@ _HERE = Path(__file__).resolve().parent
 
 VIS_NETWORK_URL = "https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js"
 VENDOR_FILE = _HERE.joinpath("vendor", "vis-network.min.js")
+
+#: Sanity floor for the download. The real file is ~689 KB; anything near this
+#: is an error page or a truncated transfer, not the library.
+MIN_VENDOR_BYTES = 100_000
 TEMPLATE_FILE = _HERE.joinpath("template.html")
 
 #: Tokens substituted into template.html at render time.
@@ -69,14 +73,32 @@ CUSTOMER_PATH = ("mgmtconfig", "v1", "admin", "customers")
 #: somewhere predictable instead of failing the run.
 UNKNOWN_ORG = "unknown-org"
 
-#: (json key, ZpaTalker method). Verified against zscaler-api-talkers 6.4.1.
-#: Each returns a plain list of raw camelCase dicts and paginates internally.
+#: Environment variables the ZPA client needs.
+CREDENTIAL_VARS = ("ZPA_CLIENT_ID", "ZPA_CLIENT_SECRET", "ZPA_CUSTOMER_ID")
+
+#: (json key, node type, ZpaTalker method). Verified against
+#: zscaler-api-talkers 6.4.1. Each method returns a plain list of raw
+#: camelCase dicts and paginates internally.
 COLLECTIONS = [
-    ("connectors", "list_connector"),
-    ("connectorGroups", "list_connector_group"),
-    ("serverGroups", "list_server_groups"),
-    ("appSegments", "list_application_segments"),
-    ("segmentGroups", "list_segment_group"),
+    ("connectors", "connector", "list_connector"),
+    ("connectorGroups", "connector_group", "list_connector_group"),
+    ("serverGroups", "server_group", "list_server_groups"),
+    ("appSegments", "app_segment", "list_application_segments"),
+    ("segmentGroups", "segment_group", "list_segment_group"),
+]
+
+#: How adjacent columns reference each other:
+#: (upstream type, downstream type, field on the upstream record pointing
+#: downstream, field on the downstream record pointing back).
+#:
+#: Both directions are read and unioned, because ZPA embeds child objects
+#: inconsistently depending on which endpoint returned the record. A field
+#: may hold a single id or a list of nested objects; both are handled.
+LINKS = [
+    ("connector", "connector_group", "appConnectorGroupId", "connectors"),
+    ("connector_group", "server_group", "serverGroups", "appConnectorGroups"),
+    ("server_group", "app_segment", "applications", "serverGroups"),
+    ("app_segment", "segment_group", "segmentGroupId", "applications"),
 ]
 
 # --------------------------------------------------------------------------- #
