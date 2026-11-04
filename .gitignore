@@ -1,0 +1,15 @@
+.venv/
+venv/
+out/
+__pycache__/
+*.pyc
+.claudetools/
+vendor
+.idea/
+
+# Credential files, in every spelling. Never commit these.
+# Deliberately broad: a missed pattern leaks a client secret, whereas an
+# over-match only means an unrelated "env*" file needs a negation below.
+env*
+.env*
+*.env

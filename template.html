@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZPA infrastructure</title>
+<style>
+  :root {
+    --bg: #15171c;
+    --panel: #1c1f26;
+    --panel-2: #22262e;
+    --line: #2e333d;
+    --text: #e8eaed;
+    --muted: #9aa1ab;
+    --accent: #5aa9ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+  #app { display: grid; grid-template-columns: 290px 1fr 0; height: 100%; }
+  #app.with-details { grid-template-columns: 290px 1fr 320px; }
+
+  aside { background: var(--panel); overflow-y: auto; overflow-x: hidden; }
+  #sidebar { border-right: 1px solid var(--line); }
+  #details { border-left: 1px solid var(--line); display: none; }
+  #app.with-details #details { display: block; }
+
+  .pad { padding: 10px 12px; }
+  .hd { padding: 12px; border-bottom: 1px solid var(--line); }
+  .hd h1 { margin: 0; font-size: 14px; letter-spacing: .02em; }
+  .hd .sub { color: var(--muted); font-size: 11px; margin-top: 3px; word-break: break-all; }
+
+  .group { border-bottom: 1px solid var(--line); padding: 10px 12px; }
+  .group h2 {
+    margin: 0 0 8px; font-size: 10px; text-transform: uppercase;
+    letter-spacing: .09em; color: var(--muted); font-weight: 600;
+  }
+
+  input[type=search], select {
+    width: 100%; background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
+    font: inherit;
+  }
+  input[type=search]:focus, select:focus { outline: 1px solid var(--accent); }
+
+  .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  button {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 9px; font: inherit; cursor: pointer;
+  }
+  button:hover { background: #2b3039; border-color: #3d444f; }
+  button.primary { background: #1d3d5e; border-color: #2f6191; }
+  button.primary:hover { background: #24507b; }
+  button.mini { padding: 2px 7px; font-size: 11px; }
+
+  label.check { display: flex; align-items: center; gap: 7px; cursor: pointer; padding: 2px 0; }
+  label.check input { accent-color: var(--accent); margin: 0; flex: none; }
+
+  .type { border-bottom: 1px solid var(--line); }
+  .type > .th {
+    display: flex; align-items: center; gap: 7px; padding: 8px 12px;
+    cursor: pointer; user-select: none;
+  }
+  .type > .th:hover { background: var(--panel-2); }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; border: 1px solid; }
+  .type .name { font-weight: 600; font-size: 12px; flex: 1; }
+  .type .tally { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .type .caret { color: var(--muted); font-size: 10px; width: 10px; }
+  .type .body { padding: 0 12px 10px; }
+  .type.collapsed .body { display: none; }
+  .items { max-height: 230px; overflow-y: auto; margin: 6px 0 0; padding: 0; list-style: none; }
+  .items li { padding: 0; }
+  .items .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .items .off { color: var(--muted); }
+  .items .gone { color: #d59a9a; font-style: italic; }
+  .note { color: var(--muted); font-size: 11px; padding: 5px 0 0; }
+
+  main { position: relative; min-width: 0; }
+  #graph { position: absolute; inset: 0 0 26px 0; }
+  #statusbar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 26px;
+    display: flex; align-items: center; gap: 14px; padding: 0 12px;
+    background: var(--panel); border-top: 1px solid var(--line);
+    color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums;
+  }
+  #legend {
+    position: absolute; left: 12px; top: 12px; z-index: 5;
+    background: rgba(28,31,38,.92); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 5px;
+  }
+  #legend .li { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--muted); }
+  #legend .arrow { color: #4b5563; margin: 0 1px; }
+
+  #details .kv { display: grid; grid-template-columns: 112px 1fr; gap: 4px 10px; font-size: 12px; }
+  #details .kv dt { color: var(--muted); }
+  #details .kv dd { margin: 0; word-break: break-word; }
+  #details h3 { margin: 0; font-size: 14px; word-break: break-word; }
+  #details .tag {
+    display: inline-block; font-size: 10px; text-transform: uppercase;
+    letter-spacing: .07em; padding: 2px 6px; border-radius: 4px;
+    border: 1px solid; margin-top: 6px;
+  }
+  #details .warn { color: #f0a0a0; font-size: 11px; margin-top: 6px; }
+  .linklist { list-style: none; margin: 4px 0 0; padding: 0; }
+  .linklist li { padding: 1px 0; }
+  .linklist a { color: var(--accent); cursor: pointer; text-decoration: none; }
+  .linklist a:hover { text-decoration: underline; }
+  .closebtn { float: right; }
+
+  /* vis-network ships its tooltip styling in a 220 KB stylesheet we do not
+     vendor; these few rules are all that block of CSS actually gives us. */
+  div.vis-tooltip {
+    position: absolute; visibility: hidden; padding: 7px 9px;
+    background: #0f1115; border: 1px solid var(--line); border-radius: 6px;
+    color: var(--text); font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
+    box-shadow: 0 6px 18px rgba(0,0,0,.5); pointer-events: none; z-index: 20;
+    max-width: 320px; white-space: normal;
+  }
+  .tip-sub { color: var(--muted); font-size: 11px; margin: 2px 0 4px; }
+  .tip-row { font-size: 11px; }
+  .tip-row span { color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="hd">
+      <h1>ZPA infrastructure</h1>
+      <div class="sub" id="meta-line"></div>
+      <div class="sub" id="fail-line" style="color:#f0a0a0"></div>
+    </div>
+
+    <div class="group">
+      <h2>Search</h2>
+      <input type="search" id="search" aria-label="Filter element lists by name or ZPA ID"
+             placeholder="Filter lists by name or ID" autocomplete="off">
+      <div class="row">
+        <button class="mini" id="btn-only-matches">Keep only matches</button>
+        <button class="mini" id="btn-drop-matches">Drop matches</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Focus</h2>
+      <select id="scope" aria-label="How far isolation reaches from the selected nodes">
+        <option value="chain">Full chain (transitive)</option>
+        <option value="direct">Direct neighbours only</option>
+      </select>
+      <div class="row">
+        <button class="primary" id="btn-isolate">Isolate selected</button>
+        <button id="btn-reset">Reset</button>
+      </div>
+      <div class="note">Click nodes on the canvas (shift-click to add), then Isolate.
+        Double-clicking a node isolates it directly.</div>
+    </div>
+
+    <div class="group">
+      <h2>Display</h2>
+      <label class="check"><input type="checkbox" id="hide-disabled"> Hide disabled objects</label>
+      <label class="check"><input type="checkbox" id="hide-isolated"> Hide unconnected nodes</label>
+      <div class="row">
+        <button class="mini" id="btn-relayout">Re-layout</button>
+        <button class="mini" id="btn-fit">Fit</button>
+      </div>
+    </div>
+
+    <div id="type-lists"></div>
+  </aside>
+
+  <main>
+    <div id="graph"></div>
+    <div id="legend"></div>
+    <div id="statusbar"><span id="status-counts"></span><span id="status-src"></span></div>
+  </main>
+
+  <aside id="details"><div class="pad" id="details-body"></div></aside>
+</div>
+
+<script type="application/json" id="graph-data">"__GRAPH_DATA__"</script>
+<script>__VIS_NETWORK_JS__</script>
+<script>
+(function () {
+  "use strict";
+
+  var DATA = JSON.parse(document.getElementById("graph-data").textContent);
+  var TYPES = DATA.types;
+  var TYPE_BY_KEY = {};
+  TYPES.forEach(function (t) { TYPE_BY_KEY[t.key] = t; });
+
+  var ALL_NODES = DATA.nodes;
+  var NODE_BY_ID = {};
+  ALL_NODES.forEach(function (n) { NODE_BY_ID[n.id] = n; });
+
+  var ALL_EDGES = [];
+  DATA.edges.forEach(function (e, i) {
+    if (NODE_BY_ID[e.from] && NODE_BY_ID[e.to]) {
+      ALL_EDGES.push({ id: "e" + i, from: e.from, to: e.to });
+    }
+  });
+
+  // Adjacency, built once. `adj` is undirected and drives transitive focus;
+  // the directed pair drives the upstream/downstream lists in the detail panel.
+  var adj = {}, upstream = {}, downstream = {};
+  ALL_NODES.forEach(function (n) { adj[n.id] = []; upstream[n.id] = []; downstream[n.id] = []; });
+  ALL_EDGES.forEach(function (e) {
+    adj[e.from].push(e.to);
+    adj[e.to].push(e.from);
+    downstream[e.from].push(e.to);
+    upstream[e.to].push(e.from);
+  });
+
+  // ---------------------------------------------------------------- state --
+  var checked = new Set(ALL_NODES.map(function (n) { return n.id; }));
+  var visibleNodeIds = new Set();
+  var visibleEdgeIds = new Set();
+  var hideDisabled = false;
+  var hideIsolated = false;
+  var LIST_CAP = 500;
+
+  // ------------------------------------------------------------- network ---
+  function visNode(n) {
+    var t = TYPE_BY_KEY[n.type];
+    var dim = n.missing || !n.enabled;
+    return {
+      id: n.id,
+      label: n.name,
+      level: n.level,
+      shape: "box",
+      margin: 8,
+      borderWidth: n.missing ? 2 : 1,
+      shapeProperties: { borderDashes: dim ? [6, 4] : false },
+      widthConstraint: { maximum: 190 },
+      color: {
+        background: n.missing ? "#23262c" : t.bg,
+        border: n.missing ? "#6b7280" : t.color,
+        highlight: { background: t.bg, border: "#ffffff" },
+        hover: { background: t.bg, border: "#ffffff" }
+      },
+      font: { color: dim ? "#9aa1ab" : "#e8eaed", size: 13,
+              face: "ui-sans-serif, system-ui, sans-serif" },
+      title: tooltip(n)
+    };
+  }
+
+  // Built as DOM, never innerHTML: object names come from the tenant.
+  function tooltip(n) {
+    var el = document.createElement("div");
+    var h = document.createElement("strong");
+    h.textContent = n.name;
+    el.appendChild(h);
+
+    var sub = document.createElement("div");
+    sub.className = "tip-sub";
+    sub.textContent = TYPE_BY_KEY[n.type].label
+      + (n.missing ? " · referenced but not returned by the API"
+                   : (n.enabled ? "" : " · disabled"));
+    el.appendChild(sub);
+
+    n.detail.slice(0, 6).forEach(function (kv) {
+      var row = document.createElement("div");
+      row.className = "tip-row";
+      var k = document.createElement("span");
+      k.textContent = kv[0] + ": ";
+      row.appendChild(k);
+      row.appendChild(document.createTextNode(kv[1]));
+      el.appendChild(row);
+    });
+    return el;
+  }
+
+  var nodes = new vis.DataSet(ALL_NODES.map(visNode));
+  var edges = new vis.DataSet(ALL_EDGES);
+  var nodesView = new vis.DataView(nodes, {
+    filter: function (item) { return visibleNodeIds.has(item.id); }
+  });
+  var edgesView = new vis.DataView(edges, {
+    filter: function (item) { return visibleEdgeIds.has(item.id); }
+  });
+
+  var HIER = {
+    enabled: true, direction: "LR", sortMethod: "directed",
+    levelSeparation: 300, nodeSpacing: 75, treeSpacing: 110,
+    blockShifting: true, edgeMinimization: true, parentCentralization: true,
+    shakeTowards: "roots"
+  };
+  var PHYS = {
+    enabled: true, solver: "hierarchicalRepulsion",
+    hierarchicalRepulsion: { nodeDistance: 130, springLength: 200,
+                             springConstant: 0.01, damping: 0.4, avoidOverlap: 0.9 },
+    stabilization: { enabled: true, iterations: 600, fit: true }
+  };
+
+  var network = new vis.Network(
+    document.getElementById("graph"),
+    { nodes: nodesView, edges: edgesView },
+    {
+      layout: { hierarchical: HIER, improvedLayout: false },
+      physics: PHYS,
+      interaction: { hover: true, tooltipDelay: 150, multiselect: true,
+                     navigationButtons: false, keyboard: false, dragNodes: true },
+      edges: {
+        arrows: { to: { enabled: true, scaleFactor: 0.55 } },
+        color: { color: "#4b5563", highlight: "#e8eaed", hover: "#9aa1ab" },
+        smooth: { enabled: true, type: "cubicBezier",
+                  forceDirection: "horizontal", roundness: 0.5 },
+        width: 1, selectionWidth: 2
+      }
+    }
+  );
+
+  // Freeze the computed layout: with physics and the hierarchical solver both
+  // off, a node stays exactly where it is dragged instead of springing back.
+  function freeze() {
+    network.storePositions();
+    network.setOptions({
+      physics: { enabled: false },
+      layout: { hierarchical: { enabled: false } }
+    });
+  }
+  network.once("stabilizationIterationsDone", function () { freeze(); network.fit(); });
+
+  function relayout() {
+    network.setOptions({ layout: { hierarchical: HIER }, physics: PHYS });
+    network.once("stabilizationIterationsDone", function () { freeze(); network.fit(); });
+    network.stabilize();
+  }
+
+  // ---------------------------------------------------------- visibility ---
+  function recompute() {
+    var base = new Set();
+    ALL_NODES.forEach(function (n) {
+      if (!checked.has(n.id)) return;
+      if (hideDisabled && !n.enabled) return;
+      base.add(n.id);
+    });
+
+    var keptEdges = [];
+    var degree = new Map();
+    ALL_EDGES.forEach(function (e) {
+      if (!base.has(e.from) || !base.has(e.to)) return;
+      keptEdges.push(e);
+      degree.set(e.from, (degree.get(e.from) || 0) + 1);
+      degree.set(e.to, (degree.get(e.to) || 0) + 1);
+    });
+
+    if (hideIsolated) {
+      var trimmed = new Set();
+      base.forEach(function (id) { if (degree.get(id)) trimmed.add(id); });
+      base = trimmed;
+      keptEdges = keptEdges.filter(function (e) {
+        return base.has(e.from) && base.has(e.to);
+      });
+    }
+
+    visibleNodeIds = base;
+    visibleEdgeIds = new Set(keptEdges.map(function (e) { return e.id; }));
+    nodesView.refresh();
+    edgesView.refresh();
+    updateTallies();
+  }
+
+  // ------------------------------------------------------------- sidebar ---
+  var typeListEl = document.getElementById("type-lists");
+  var nodesByType = {};
+  TYPES.forEach(function (t) { nodesByType[t.key] = []; });
+  ALL_NODES.forEach(function (n) { nodesByType[n.type].push(n); });
+
+  function searchTerm() {
+    return document.getElementById("search").value.trim().toLowerCase();
+  }
+
+  function matches(n, term) {
+    if (!term) return true;
+    return n.name.toLowerCase().indexOf(term) !== -1
+        || n.rawId.toLowerCase().indexOf(term) !== -1;
+  }
+
+  function matchingNodes() {
+    var term = searchTerm();
+    if (!term) return [];
+    return ALL_NODES.filter(function (n) { return matches(n, term); });
+  }
+
+  // Sidebar elements per type, kept out of the DATA objects so those stay data.
+  var UI_BY_TYPE = {};
+
+  TYPES.forEach(function (t) {
+    var sec = document.createElement("section");
+    sec.className = "type";
+    sec.dataset.type = t.key;
+
+    var th = document.createElement("div");
+    th.className = "th";
+    var caret = document.createElement("span");
+    caret.className = "caret";
+    caret.textContent = "▾";
+    var sw = document.createElement("span");
+    sw.className = "swatch";
+    sw.style.background = t.bg;
+    sw.style.borderColor = t.color;
+    var nm = document.createElement("span");
+    nm.className = "name";
+    nm.textContent = t.label;
+    var tally = document.createElement("span");
+    tally.className = "tally";
+    th.appendChild(caret); th.appendChild(sw); th.appendChild(nm); th.appendChild(tally);
+    th.addEventListener("click", function () {
+      sec.classList.toggle("collapsed");
+      caret.textContent = sec.classList.contains("collapsed") ? "▸" : "▾";
+    });
+
+    var body = document.createElement("div");
+    body.className = "body";
+    var row = document.createElement("div");
+    row.className = "row";
+    [["All", "all"], ["None", "none"], ["Invert", "invert"]].forEach(function (pair) {
+      var b = document.createElement("button");
+      b.className = "mini";
+      b.textContent = pair[0];
+      b.addEventListener("click", function () { bulk(t.key, pair[1]); });
+      row.appendChild(b);
+    });
+    var ul = document.createElement("ul");
+    ul.className = "items";
+    var note = document.createElement("div");
+    note.className = "note";
+
+    body.appendChild(row); body.appendChild(ul); body.appendChild(note);
+    sec.appendChild(th); sec.appendChild(body);
+    typeListEl.appendChild(sec);
+
+    UI_BY_TYPE[t.key] = { tally: tally, list: ul, note: note };
+  });
+
+  // All/None/Invert act on every object of the type, not just the rows the
+  // search happens to be showing.
+  function bulk(typeKey, action) {
+    nodesByType[typeKey].forEach(function (n) {
+      if (action === "all") checked.add(n.id);
+      else if (action === "none") checked.delete(n.id);
+      else if (checked.has(n.id)) checked.delete(n.id);
+      else checked.add(n.id);
+    });
+    renderLists();
+    recompute();
+  }
+
+  function renderLists() {
+    var term = searchTerm();
+    TYPES.forEach(function (t) {
+      var ui = UI_BY_TYPE[t.key];
+      var pool = nodesByType[t.key].filter(function (n) { return matches(n, term); });
+      var shown = pool.slice(0, LIST_CAP);
+
+      ui.list.textContent = "";
+      shown.forEach(function (n) {
+        var li = document.createElement("li");
+        var lab = document.createElement("label");
+        lab.className = "check";
+        var cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = checked.has(n.id);
+        cb.addEventListener("change", function () {
+          if (cb.checked) checked.add(n.id); else checked.delete(n.id);
+          recompute();
+        });
+        var span = document.createElement("span");
+        span.className = "nm" + (n.missing ? " gone" : (n.enabled ? "" : " off"));
+        span.textContent = n.name + (n.enabled || n.missing ? "" : "  (disabled)");
+        span.title = n.name;
+        lab.appendChild(cb); lab.appendChild(span);
+        li.appendChild(lab);
+        ui.list.appendChild(li);
+      });
+
+      if (pool.length > shown.length) {
+        ui.note.textContent = "Showing " + shown.length + " of " + pool.length
+          + " — narrow with search. All/None/Invert still cover every object.";
+      } else if (pool.length === 0) {
+        ui.note.textContent = term ? "No matches." : "None found.";
+      } else {
+        ui.note.textContent = "";
+      }
+    });
+    updateTallies();
+  }
+
+  function updateTallies() {
+    TYPES.forEach(function (t) {
+      var pool = nodesByType[t.key];
+      var vis_ = pool.filter(function (n) { return visibleNodeIds.has(n.id); }).length;
+      UI_BY_TYPE[t.key].tally.textContent = vis_ + " / " + pool.length;
+    });
+    document.getElementById("status-counts").textContent =
+      visibleNodeIds.size + " / " + ALL_NODES.length + " elements "
+      + visibleEdgeIds.size + " / " + ALL_EDGES.length + " links"
+      + (DATA.missing ? " " + DATA.missing + " dangling reference"
+          + (DATA.missing === 1 ? "" : "s") : "");
+  }
+
+  // --------------------------------------------------------------- focus ---
+  function relatedTo(seedIds) {
+    var scope = document.getElementById("scope").value;
+    var keep = new Set(seedIds);
+    if (scope === "direct") {
+      seedIds.forEach(function (id) {
+        (adj[id] || []).forEach(function (x) { keep.add(x); });
+      });
+      return keep;
+    }
+    var stack = seedIds.slice();
+    while (stack.length) {
+      var cur = stack.pop();
+      (adj[cur] || []).forEach(function (next) {
+        if (!keep.has(next)) { keep.add(next); stack.push(next); }
+      });
+    }
+    return keep;
+  }
+
+  function isolate(seedIds) {
+    seedIds = seedIds.filter(function (id) { return NODE_BY_ID[id]; });
+    if (!seedIds.length) return;
+    checked = relatedTo(seedIds);
+    renderLists();
+    recompute();
+    network.fit();
+  }
+
+  // -------------------------------------------------------- detail panel ---
+  var appEl = document.getElementById("app");
+  var detailBody = document.getElementById("details-body");
+
+  function showDetails(nodeId) {
+    var n = NODE_BY_ID[nodeId];
+    if (!n) return;
+    var t = TYPE_BY_KEY[n.type];
+    detailBody.textContent = "";
+
+    var close = document.createElement("button");
+    close.className = "mini closebtn";
+    close.textContent = "Close";
+    close.addEventListener("click", hideDetails);
+    detailBody.appendChild(close);
+
+    var h = document.createElement("h3");
+    h.textContent = n.name;
+    detailBody.appendChild(h);
+
+    var tag = document.createElement("div");
+    tag.className = "tag";
+    tag.style.color = t.color;
+    tag.style.borderColor = t.color;
+    tag.textContent = t.label;
+    detailBody.appendChild(tag);
+
+    if (n.missing) {
+      var warn = document.createElement("div");
+      warn.className = "warn";
+      warn.textContent = "Referenced by another object but not returned by its own "
+        + "API endpoint (ID " + n.rawId + "). Possible stale reference or a "
+        + "permissions gap on the API role.";
+      detailBody.appendChild(warn);
+    }
+
+    var btn = document.createElement("button");
+    btn.className = "primary";
+    btn.style.marginTop = "10px";
+    btn.textContent = "Isolate this chain";
+    btn.addEventListener("click", function () { isolate([n.id]); });
+    detailBody.appendChild(btn);
+
+    if (n.detail.length) {
+      detailBody.appendChild(sectionTitle("Properties"));
+      var dl = document.createElement("dl");
+      dl.className = "kv";
+      n.detail.forEach(function (kv) {
+        var dt = document.createElement("dt");
+        dt.textContent = kv[0];
+        var dd = document.createElement("dd");
+        dd.textContent = kv[1];
+        dl.appendChild(dt); dl.appendChild(dd);
+      });
+      detailBody.appendChild(dl);
+    }
+
+    var idDl = document.createElement("dl");
+    idDl.className = "kv";
+    var idDt = document.createElement("dt");
+    idDt.textContent = "ZPA ID";
+    var idDd = document.createElement("dd");
+    idDd.textContent = n.rawId;
+    idDl.appendChild(idDt); idDl.appendChild(idDd);
+    detailBody.appendChild(idDl);
+
+    addLinks("Depends on (upstream)", upstream[n.id]);
+    addLinks("Used by (downstream)", downstream[n.id]);
+
+    appEl.classList.add("with-details");
+    network.redraw();
+  }
+
+  function sectionTitle(text) {
+    var el = document.createElement("h2");
+    el.style.cssText = "margin:14px 0 6px;font-size:10px;text-transform:uppercase;"
+      + "letter-spacing:.09em;color:var(--muted)";
+    el.textContent = text;
+    return el;
+  }
+
+  function addLinks(title, ids) {
+    if (!ids || !ids.length) return;
+    detailBody.appendChild(sectionTitle(title + " (" + ids.length + ")"));
+    var ul = document.createElement("ul");
+    ul.className = "linklist";
+    ids.slice().sort(function (a, b) {
+      var na = NODE_BY_ID[a], nb = NODE_BY_ID[b];
+      return na.level - nb.level || na.name.localeCompare(nb.name);
+    }).forEach(function (id) {
+      var other = NODE_BY_ID[id];
+      var li = document.createElement("li");
+      var a = document.createElement("a");
+      a.textContent = other.name;
+      a.title = TYPE_BY_KEY[other.type].label;
+      a.addEventListener("click", function () {
+        if (!visibleNodeIds.has(id)) { checked.add(id); renderLists(); recompute(); }
+        network.selectNodes([id]);
+        network.focus(id, { scale: 1.1, animation: true });
+        showDetails(id);
+      });
+      li.appendChild(a);
+      ul.appendChild(li);
+    });
+    detailBody.appendChild(ul);
+  }
+
+  function hideDetails() {
+    appEl.classList.remove("with-details");
+    network.redraw();
+  }
+
+  // ------------------------------------------------------------- wire-up ---
+  network.on("click", function (params) {
+    if (params.nodes.length === 1) showDetails(params.nodes[0]);
+    else if (!params.nodes.length) hideDetails();
+  });
+  network.on("doubleClick", function (params) {
+    if (params.nodes.length) isolate([params.nodes[0]]);
+  });
+
+  document.getElementById("search").addEventListener("input", renderLists);
+  document.getElementById("btn-only-matches").addEventListener("click", function () {
+    var hits = matchingNodes();
+    if (!hits.length) return;
+    checked = new Set(hits.map(function (n) { return n.id; }));
+    renderLists(); recompute();
+  });
+  document.getElementById("btn-drop-matches").addEventListener("click", function () {
+    matchingNodes().forEach(function (n) { checked.delete(n.id); });
+    renderLists(); recompute();
+  });
+  document.getElementById("btn-isolate").addEventListener("click", function () {
+    isolate(network.getSelectedNodes());
+  });
+  document.getElementById("btn-reset").addEventListener("click", function () {
+    checked = new Set(ALL_NODES.map(function (n) { return n.id; }));
+    document.getElementById("search").value = "";
+    document.getElementById("hide-disabled").checked = false;
+    document.getElementById("hide-isolated").checked = false;
+    hideDisabled = hideIsolated = false;
+    renderLists(); recompute(); network.fit();
+  });
+  document.getElementById("hide-disabled").addEventListener("change", function (e) {
+    hideDisabled = e.target.checked; recompute();
+  });
+  document.getElementById("hide-isolated").addEventListener("change", function (e) {
+    hideIsolated = e.target.checked; recompute();
+  });
+  document.getElementById("btn-relayout").addEventListener("click", relayout);
+  document.getElementById("btn-fit").addEventListener("click", function () { network.fit(); });
+
+  // ------------------------------------------------------------- chrome ----
+  (function buildLegend() {
+    var box = document.getElementById("legend");
+    var line = document.createElement("div");
+    line.className = "li";
+    TYPES.forEach(function (t, i) {
+      if (i) {
+        var arr = document.createElement("span");
+        arr.className = "arrow";
+        arr.textContent = "→";
+        line.appendChild(arr);
+      }
+      var sw = document.createElement("span");
+      sw.className = "swatch";
+      sw.style.background = t.bg;
+      sw.style.borderColor = t.color;
+      sw.title = t.label;
+      line.appendChild(sw);
+    });
+    box.appendChild(line);
+
+    TYPES.forEach(function (t) {
+      var li = document.createElement("div");
+      li.className = "li";
+      var sw = document.createElement("span");
+      sw.className = "swatch";
+      sw.style.background = t.bg;
+      sw.style.borderColor = t.color;
+      li.appendChild(sw);
+      li.appendChild(document.createTextNode(t.label));
+      box.appendChild(li);
+    });
+
+    var dashed = document.createElement("div");
+    dashed.className = "li";
+    var dsw = document.createElement("span");
+    dsw.className = "swatch";
+    dsw.style.background = "#23262c";
+    dsw.style.borderColor = "#6b7280";
+    dsw.style.borderStyle = "dashed";
+    dashed.appendChild(dsw);
+    dashed.appendChild(document.createTextNode("Disabled or dangling"));
+    box.appendChild(dashed);
+  })();
+
+  document.getElementById("meta-line").textContent =
+    (DATA.meta.org ? DATA.meta.org + " · " : "")
+    + DATA.meta.source + " · " + DATA.meta.generated;
+  document.getElementById("status-src").textContent =
+    (DATA.meta.org ? DATA.meta.org + " · " : "")
+    + DATA.meta.source + " · generated " + DATA.meta.generated;
+
+  var failKeys = Object.keys(DATA.meta.failures || {});
+  if (failKeys.length) {
+    document.getElementById("fail-line").textContent =
+      "Incomplete: " + failKeys.join(", ") + " failed to fetch.";
+  }
+
+  renderLists();
+  recompute();
+})();
+</script>
+</body>
+</html>

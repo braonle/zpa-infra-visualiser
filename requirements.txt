@@ -1,0 +1,6 @@
+# Community ZPA API library (sergitopereira/zscaler_api_talkers), not the
+# vendor SDK. Pinned: the ZpaTalker constructor, the five list_* method names,
+# and the _obtain_all_results arity bug this script works around were all
+# verified against this exact version.
+pip_system_certs
+zscaler-api-talkers==6.4.1
