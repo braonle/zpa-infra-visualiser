@@ -282,15 +282,15 @@
   });
 
   var HIER = {
-    enabled: true, direction: "LR", sortMethod: "directed",
+    enabled: true, direction: "DU", sortMethod: "directed",
     levelSeparation: 300, nodeSpacing: 75, treeSpacing: 110,
     blockShifting: true, edgeMinimization: true, parentCentralization: true,
     shakeTowards: "roots"
   };
   var PHYS = {
     enabled: true, solver: "hierarchicalRepulsion",
-    hierarchicalRepulsion: { nodeDistance: 130, springLength: 200,
-                             springConstant: 0.01, damping: 0.4, avoidOverlap: 0.9 },
+    hierarchicalRepulsion: { nodeDistance: 200, springLength: 200,
+                             springConstant: 0.01, damping: 0.4, avoidOverlap: 1 },
     stabilization: { enabled: true, iterations: 600, fit: true }
   };
 
@@ -298,7 +298,8 @@
     document.getElementById("graph"),
     { nodes: nodesView, edges: edgesView },
     {
-      layout: { hierarchical: HIER, improvedLayout: false },
+      autoResize: true,
+      layout: { hierarchical: HIER, improvedLayout: true },
       physics: PHYS,
       interaction: { hover: true, tooltipDelay: 150, multiselect: true,
                      navigationButtons: false, keyboard: false, dragNodes: true },
