@@ -30,7 +30,7 @@ import logging
 import os
 import re
 import sys
-import urllib.request
+import requests
 from collections import Counter
 from pathlib import Path
 
@@ -382,8 +382,8 @@ def download_vendor(dest=VENDOR_FILE):
     """
     dest.parent.mkdir(parents=True, exist_ok=True)
     logger.info("Downloading %s", VIS_NETWORK_URL)
-    with urllib.request.urlopen(VIS_NETWORK_URL, timeout=60) as response:
-        payload = response.read()
+    with requests.get(VIS_NETWORK_URL, timeout=60) as response:
+        payload = response.content
     # Checked before writing, so a captive portal or an error page cannot
     # overwrite a good copy with something that renders a blank page.
     if len(payload) < MIN_VENDOR_BYTES:
